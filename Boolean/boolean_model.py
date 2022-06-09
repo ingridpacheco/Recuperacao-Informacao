@@ -1,5 +1,9 @@
-# from example1 import M, stopwords, q, separadores
+import sys
+
+sys.path.insert(0, '../Examples')
+#from example1 import M, stopwords, q, separadores
 from example2 import M, stopwords, q, separadores
+#from example3 import M, stopwords, q, separadores
 
 words = []
 
