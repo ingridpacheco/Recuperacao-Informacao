@@ -1,5 +1,7 @@
 import math
+import sys
 
+sys.path.insert(0, '../Examples')
 #from example2 import M, stopwords, q, separadores
 from example3 import M, stopwords, q, separadores
 
