@@ -2,13 +2,11 @@ import math
 import sys
 
 sys.path.insert(0, '../Examples')
-from example3 import M, stopwords, q, separadores
+#from example3 import M, stopwords, q, separadores
 #from example2 import M, stopwords, q, separadores
-#from example1 import M, stopwords, q, separadores
+from example1 import M, stopwords, q, separadores
 
-words = []
-
-def pre_processing(entry):
+def pre_processing(entry, stopwords, separadores, words):
     # Tokenizacao
     for s in separadores:
         entry = entry.replace(s, ' ')
@@ -25,9 +23,9 @@ def pre_processing(entry):
                 words.append(word)
             result.append(word)
 
-    return result
+    return result, words
 
-def create_matrixes(phrases,words = words):
+def create_matrixes(phrases,words):
     qty = len(phrases)
     freq = {}
     docs = {}
@@ -46,6 +44,10 @@ def create_matrixes(phrases,words = words):
     return freq, docs
 
 def calculate_tf_idf(freq, docs, qty_docs):
+
+    print('Words frequencies in docs: ' + str(freq))
+    print('Words frequencies: ' + str(docs))
+    print('Quantity of documents: ' + str(qty_docs) + '\n')
 
     tf_idf = {}
     vector_norm = [0] * qty_docs
@@ -68,22 +70,25 @@ def calculate_rank(qty_docs, query, tf_idf, tf_idf_query, total_norm, query_norm
         doc_sum = 0
         for term in query:
             doc_sum += tf_idf[term][doc] * tf_idf_query[term][0]
-        rank[doc] = doc_sum / (total_norm[doc] * query_norm[0])
+        rank[doc+1] = doc_sum / (total_norm[doc] * query_norm[0])
 
     return rank
 
-if __name__ == "__main__":
+def main_vectorial(M, stopwords, q, separadores):
     phrases = []
     print('Phrases:')
+    words = []
     for phrase in M:
         print(phrase)
-        phrases.append(pre_processing(phrase[0]))
+        res = pre_processing(phrase[0], stopwords, separadores, words)
+        phrases.append(res[0])
+        words = res[1]
 
-    query = pre_processing(q)
+    query = pre_processing(q, stopwords, separadores, words)[0]
     
     print('Query: ', query, '\n')
 
-    freq,docs = create_matrixes(phrases)
+    freq,docs = create_matrixes(phrases, words)
 
     freq_query,_ = create_matrixes([query],query)
 
@@ -101,4 +106,11 @@ if __name__ == "__main__":
 
     print('Rank: ', rank)
 
-    print('Final Ranking: ', [x[0] for x in sorted(rank.items(),key=lambda x: x[1], reverse=True)])
+    sorted_ranking = [x[0] for x in sorted(rank.items(),key=lambda x: x[1], reverse=True)]
+
+    print('Final Ranking: ', str(sorted_ranking) + '\n')
+
+    return sorted_ranking
+
+if __name__ == "__main__":
+    main_vectorial(M, stopwords, q, separadores)
