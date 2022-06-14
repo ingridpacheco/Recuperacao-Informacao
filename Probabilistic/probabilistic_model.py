@@ -3,13 +3,11 @@ import math
 import sys
 
 sys.path.insert(0, '../Examples')
-from example3 import M, stopwords, q, separadores
+#from example3 import M, stopwords, q, separadores
 #from example2 import M, stopwords, q, separadores
-#from example1 import M, stopwords, q, separadores
+from example1 import M, stopwords, q, separadores
 
-words = []
-
-def pre_processing(entry):
+def pre_processing(entry, stopwords, separadores, words):
     # Tokenizacao
     for s in separadores:
         entry = entry.replace(s, ' ')
@@ -26,9 +24,9 @@ def pre_processing(entry):
                 words.append(word)
             result.append(word)
 
-    return result
+    return result, words
 
-def create_matrixes(phrases,words = words):
+def create_matrixes(phrases, words):
     qty = len(phrases)
     freq = {}
     log_words = {}
@@ -72,11 +70,11 @@ def calculate_vectorial_rank(qty_docs, query, tf_idf, tf_idf_query, total_norm, 
         doc_sum = 0
         for term in query:
             doc_sum += tf_idf[term][doc] * tf_idf_query[term][0]
-        rank[doc] = doc_sum / (total_norm[doc] * query_norm[0])
+        rank[doc+1] = doc_sum / (total_norm[doc] * query_norm[0])
 
     return rank
 
-def calculate_probabilistic_rank(qty_docs, query, docs, len_phrases, avg_len_doc):
+def calculate_probabilistic_rank(freq, qty_docs, query, docs, len_phrases, avg_len_doc, k1, b):
     rank = {}
 
     for doc in range(qty_docs):
@@ -86,7 +84,7 @@ def calculate_probabilistic_rank(qty_docs, query, docs, len_phrases, avg_len_doc
                 bij = ((k1 + 1) * freq[term][doc]) / (k1 * ((1-b)+(b*(len_phrases[doc]/avg_len_doc))) + freq[term][doc])
                 sim = math.log2((qty_docs - docs[term] + 0.5)/(docs[term] + 0.5))
                 doc_sum += bij * sim
-        rank[doc] = doc_sum
+        rank[doc+1] = doc_sum
 
     return rank
 
@@ -113,27 +111,55 @@ def run_query(query, df):
 
     return (and_docs, or_docs)
 
+def main_probabilistic(freq, len_phrases, qty_docs, query, docs):
+    k1 = float(input('Qual o valor de K1? '))
+    b = float(input('Qual o valor de b? '))
+
+    avg_len_doc = sum(len_phrases)/qty_docs
+
+    print('Len phrases: ', len_phrases)
+
+    print('Avg len: ', avg_len_doc)
+
+    rank = calculate_probabilistic_rank(freq, qty_docs, query, docs, len_phrases, avg_len_doc, k1, b)
+
+    print('Rank: ', rank)
+
+    sorted_ranking = [x[0] for x in sorted(rank.items(),key=lambda x: x[1], reverse=True)]
+
+    print('Final Ranking: ', str(sorted_ranking) + '\n')
+
+    return sorted_ranking
+
+def phrase_processing(M, q, stopwords, separadores, words):
+    phrases = []
+    len_phrases = [0] * len(M)
+    print('Phrases:')
+    for i, phrase in enumerate(M):
+        print(phrase)
+        res = pre_processing(phrase[0], stopwords, separadores, words)
+        processed_phrase = res[0]
+        words = res[1]
+        len_phrases[i] = len(processed_phrase)
+        phrases.append(processed_phrase)
+
+    qty_docs = len(phrases)
+
+    query = pre_processing(q, stopwords, separadores, words)[0]
+
+    print('Query: ', query, '\n')
+
+    freq, logs, docs = create_matrixes(phrases, words)
+
+    return phrases, len_phrases, qty_docs, query, freq, logs, docs
+
 if __name__ == "__main__":
     method = int(input("Qual método você quer usar? 1 - Booleano ; 2 - Vetorial ; 3 - Probabilístico "))
     if method < 1 or method > 3:
         print("Método inválido")
     else:
-        phrases = []
-        len_phrases = [0] * len(M)
-        print('Phrases:')
-        for i, phrase in enumerate(M):
-            print(phrase)
-            processed_phrase = pre_processing(phrase[0])
-            len_phrases[i] = len(processed_phrase)
-            phrases.append(processed_phrase)
-
-        qty_docs = len(phrases)
-
-        query = pre_processing(q)
-        
-        print('Query: ', query, '\n')
-
-        freq, logs, docs = create_matrixes(phrases)
+        words = []
+        phrases, len_phrases, qty_docs, query, freq, logs, docs = phrase_processing(M, q, stopwords, separadores, words)
 
         if method == 1:
             and_docs, or_docs = run_query(query, freq)
@@ -159,18 +185,5 @@ if __name__ == "__main__":
             print('Final Ranking: ', [x[0] for x in sorted(rank.items(),key=lambda x: x[1], reverse=True)])
         
         else:
-            k1 = float(input('Qual o valor de K1? '))
-            b = float(input('Qual o valor de b? '))
-
-            avg_len_doc = sum(len_phrases)/qty_docs
-
-            print('Len phrases: ', len_phrases)
-
-            print('Avg len: ', avg_len_doc)
-
-            rank = calculate_probabilistic_rank(qty_docs, query, docs, len_phrases, avg_len_doc)
-
-            print('Rank: ', rank)
-
-            print('Final Ranking: ', [x[0] for x in sorted(rank.items(),key=lambda x: x[1], reverse=True)])
+            main_probabilistic(freq, len_phrases, qty_docs, query, docs)
 
